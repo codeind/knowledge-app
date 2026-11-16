@@ -1,0 +1,64 @@
+name: Daily content
+
+on:
+  schedule:
+    - cron: "17 11 * * *"   # every day at 11:17 UTC (5:17 or 6:17 in Iowa)
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "Job to run"
+        type: choice
+        options: [daily, all, news, learn, laws, books]
+        default: daily
+      domain:
+        description: "For learn: history, ancient_history, economics, sports, science"
+        default: ""
+      country:
+        description: "For laws: us or in"
+        default: ""
+
+concurrency:
+  group: content-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    defaults:
+      run:
+        working-directory: backend
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+      LLM_DRAFT_MODEL: ${{ secrets.LLM_DRAFT_MODEL }}
+      LLM_VERIFY_MODEL: ${{ secrets.LLM_VERIFY_MODEL }}
+      CONGRESS_API_KEY: ${{ secrets.CONGRESS_API_KEY }}
+      KB_USER_AGENT: ${{ secrets.KB_USER_AGENT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - run: pip install -r requirements.txt
+      - name: Check settings
+        run: |
+          if [ -z "$DATABASE_URL" ]; then echo "::error::DATABASE_URL secret is not set"; exit 1; fi
+          if [ -z "$LLM_API_KEY" ]; then echo "::warning::LLM_API_KEY not set: cards will be extractive placeholders"; fi
+      - name: Prepare database (tables + sample cards, safe to repeat)
+        run: python -m kb.cli seed
+      - name: Run content job
+        env:
+          JOB: ${{ github.event.inputs.job || 'daily' }}
+          DOMAIN: ${{ github.event.inputs.domain }}
+          COUNTRY: ${{ github.event.inputs.country }}
+        run: |
+          set -- run "$JOB"
+          [ -n "$DOMAIN" ] && set -- "$@" --domain "$DOMAIN"
+          [ -n "$COUNTRY" ] && set -- "$@" --country "$COUNTRY"
+          python -m kb.cli "$@"
+      - name: Quality numbers
+        if: always()
+        run: python -m kb.cli stats

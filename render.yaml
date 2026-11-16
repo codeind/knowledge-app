@@ -1,0 +1,15 @@
+# Render Blueprint: one free web service that serves the API and the pre-built website.
+services:
+  - type: web
+    name: knowledge-app
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn kb.api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: DATABASE_URL
+        sync: false        # paste the Neon connection string in the Render dashboard

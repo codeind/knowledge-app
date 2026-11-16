@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #1c1b19;
+  --color-muted: #6b6760;
+  --color-line: #e6e2da;
+  --color-paper: #faf8f4;
+  --color-accent: #2f5d8a;
+  --color-accent-soft: #e7eef6;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+html {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.card-title {
+  font-family: var(--font-serif);
+}
